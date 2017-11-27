@@ -1,0 +1,15 @@
+[run]
+source =
+    peewee_sanic_rest
+    tests
+branch = True
+omit =
+    peewee_sanic_rest/cli.py
+
+[report]
+exclude_lines =
+    no cov
+    no qa
+    noqa
+    pragma: no cover
+    if __name__ == .__main__.:

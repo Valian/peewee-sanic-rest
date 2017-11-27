@@ -1,0 +1,17 @@
+[metadata]
+name = 'peewee-sanic-rest'
+version = '0.0.1'
+description = 'Create CRUD endpoints using Peewee, Sanic and Marshmallow-peewee. Based on Django-Rest-Framework.'
+author = 'Valian'
+author_email = 'jakub.skalecki@gmail.com'
+license = 'MIT'
+url = 'https://github.com/_/peewee-sanic-rest'
+
+[requires]
+python_version = ['3.5', '3.6']
+
+[build-system]
+requires = ['setuptools', 'wheel']
+
+[tool.hatch.commands]
+prerelease = 'hatch build'
