@@ -4,7 +4,7 @@ from typing import List
 
 import peewee
 
-from exceptions import FilterConfigurationException, FilterInvalidArgumentException
+from peewee_sanic_rest.exceptions import FilterConfigurationException, FilterInvalidArgumentException
 
 logger = logging.getLogger(__name__)
 

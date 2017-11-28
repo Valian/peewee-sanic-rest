@@ -3,8 +3,8 @@ import logging
 from sanic.exceptions import abort, InvalidUsage
 from sanic.response import json
 
-from filters import FilteredResourceMixin
-from exceptions import FilterInvalidArgumentException, ConfigurationException
+from peewee_sanic_rest.filters import FilteredResourceMixin
+from peewee_sanic_rest.exceptions import FilterInvalidArgumentException, ConfigurationException
 
 logger = logging.getLogger(__name__)
 
