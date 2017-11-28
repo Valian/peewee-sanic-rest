@@ -1,8 +1,6 @@
 peewee-sanic-rest
 =================
 
------
-
 .. contents:: **Table of Contents**
     :backlinks: none
 

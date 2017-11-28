@@ -22,7 +22,7 @@ REQUIRES = [
 setup(
     name='peewee-sanic-rest',
     version=version,
-    description='',
+    description='Easily create REST API using Peewee, Sanic and Peewee-Marshmallow',
     long_description=readme,
     author='Valian',
     author_email='jakub.skalecki@gmail.com',
