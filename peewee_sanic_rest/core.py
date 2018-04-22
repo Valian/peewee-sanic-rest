@@ -109,11 +109,7 @@ class UpdateModelMixin(object):
             return json(errors, status=400)
 
 
-class ModelResource(object):
-
-    schema_model = None
-    model = None
-    queryset = None
+class Resource(object):
 
     action_to_handler = {
         'list_get': 'list',
@@ -123,20 +119,12 @@ class ModelResource(object):
         'detail_patch': 'update'
     }
 
-    def get_queryset(self, request):
-        return self.queryset if self.queryset is not None else self.model.select()
-
-    def get_schema_model(self, request):
-        return self.schema_model()
-
-    async def serialize(self, o):
-        return self.schema.dump(o).data
+    def __init__(self, request, **kwargs):
+        self.request = request
 
     async def dispatch(self, request, id=None):
         try:
             return await self._call_action(request, id)
-        except self.model.DoesNotExist:
-            return json({'error': 'Not Found'}, status=404)
         except FilterInvalidArgumentException as e:
             logger.exception(e)
             return json({'error': str(e)}, status=400)
@@ -158,32 +146,27 @@ class ModelResource(object):
             abort(405)
 
     @classmethod
-    def as_view(cls, manager, method='dispatch'):
+    def as_view(cls, method='dispatch', **view_kwargs):
         def view(request, *args, **kwargs):
-            self = cls()
-            self.schema = self.get_schema_model(request)
-            self.request = request
-            self.manager = manager
-            self.args = args
-            self.kwargs = kwargs
+            self = cls(request, **view_kwargs)
             handler = getattr(self, method)
             return handler(request, *args, **kwargs)
         return view
 
     @classmethod
-    def register(cls, app, manager, **kwargs):
-        app.add_route(cls.as_view(manager), '/', methods=['GET', 'POST'])
-        app.add_route(cls.as_view(manager), '/<id:number>', methods=['GET', 'PATCH', 'DELETE'])
+    def register(cls, app, **kwargs):
+        app.add_route(cls.as_view(**kwargs), '/', methods=['GET', 'POST'])
+        app.add_route(cls.as_view(**kwargs), '/<id:number>', methods=['GET', 'PATCH', 'DELETE'])
         for name in dir(cls):
             elem = getattr(cls, name)
             route = getattr(elem, '_route', None)
             if route:
-                cls.add_custom_route(app, manager, name, route)
+                cls.add_custom_route(app, name, route, **kwargs)
 
     @classmethod
-    def add_custom_route(cls, app, manager, name, route):
+    def add_custom_route(cls, app, name, route, **kwargs):
         endpoint = name.replace('_', '-')
-        handler = cls.as_view(method=name, manager=manager)
+        handler = cls.as_view(method=name, **kwargs)
         if route['type'] == 'detail':
             path = '/<id:number>/{}'.format(endpoint)
             app.add_route(handler, path, **route['kwargs'])
@@ -192,6 +175,34 @@ class ModelResource(object):
             app.add_route(handler, path, **route['kwargs'])
         else:
             raise ConfigurationException('Unknown route type {}'.format(route['type']))
+
+
+class ModelResource(Resource):
+
+    schema_model = None
+    model = None
+    queryset = None
+
+    def __init__(self, request, **kwargs):
+        super().__init__(request, **kwargs)
+        assert 'manager' in kwargs, "You must pass manager in 'as_view' method"
+        self.manager = kwargs['manager']
+        self.schema = self.get_schema_model(request)
+
+    def get_queryset(self, request):
+        return self.queryset if self.queryset is not None else self.model.select()
+
+    def get_schema_model(self, request):
+        return self.schema_model()
+
+    async def serialize(self, o):
+        return self.schema.dump(o).data
+
+    async def dispatch(self, request, id=None):
+        try:
+            return super(ModelResource, self).dispatch(request, id)
+        except self.model.DoesNotExist:
+            return json({'error': 'Not Found'}, status=404)
 
 
 class ReadOnlyModelResource(RetrieveModelMixin, FilteredResourceMixin, ListModelMixin, ModelResource):
