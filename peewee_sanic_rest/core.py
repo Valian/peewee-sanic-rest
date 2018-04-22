@@ -120,6 +120,7 @@ class Resource(object):
     }
 
     def __init__(self, request, **kwargs):
+        super(Resource, self).__init__(**kwargs)
         self.request = request
 
     async def dispatch(self, request, id=None):
@@ -184,9 +185,10 @@ class ModelResource(Resource):
     queryset = None
 
     def __init__(self, request, **kwargs):
-        super().__init__(request, **kwargs)
         assert 'manager' in kwargs, "You must pass manager in 'as_view' method"
-        self.manager = kwargs['manager']
+        manager = kwargs.pop('manager')
+        super(ModelResource, self).__init__(request, **kwargs)
+        self.manager = manager
         self.schema = self.get_schema_model(request)
 
     def get_queryset(self, request):
@@ -200,12 +202,12 @@ class ModelResource(Resource):
 
     async def dispatch(self, request, id=None):
         try:
-            return super(ModelResource, self).dispatch(request, id)
+            return await super(ModelResource, self).dispatch(request, id)
         except self.model.DoesNotExist:
             return json({'error': 'Not Found'}, status=404)
 
 
-class ReadOnlyModelResource(RetrieveModelMixin, FilteredResourceMixin, ListModelMixin, ModelResource):
+class ReadOnlyModelResource(RetrieveModelMixin, ListModelMixin, ModelResource, FilteredResourceMixin):
     pass
 
 

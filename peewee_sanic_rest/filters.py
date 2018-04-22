@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 class Filter(object):
 
     def __init__(self, *, ignore_failure=False):
+        super(Filter, self).__init__()
         self.ignore_failure = ignore_failure
 
     def prepare_value(self, value):
@@ -184,7 +185,7 @@ class FilteredResourceMixin(FilterSet):
 
     async def dispatch(self, request, id=None):
         try:
-            await super().dispatch(request, id)
+            await super(FilteredResourceMixin, self).dispatch(request, id)
         except FilterInvalidArgumentException as e:
             logger.exception(e)
             return json({'error': str(e)}, status=400)
