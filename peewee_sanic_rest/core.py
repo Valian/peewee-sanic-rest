@@ -123,20 +123,14 @@ class Resource(object):
         super(Resource, self).__init__(**kwargs)
         self.request = request
 
-    async def dispatch(self, request, id=None):
+    async def dispatch(self, request, **kwargs):
         try:
-            return await self._call_action(request, id)
+            is_detail_view = bool(kwargs.get('id'))
+            handler = self._get_handler(request.method, is_detail_view)
+            return await handler(request, **kwargs)
         except FilterInvalidArgumentException as e:
             logger.exception(e)
             return json({'error': str(e)}, status=400)
-
-    async def _call_action(self, request, id):
-        is_detail_view = bool(id)
-        handler = self._get_handler(request.method, is_detail_view)
-        if is_detail_view:
-            return await handler(request, id)
-        else:
-            return await handler(request)
 
     def _get_handler(self, method, is_detail_view):
         try:
@@ -155,24 +149,32 @@ class Resource(object):
         return view
 
     @classmethod
-    def register(cls, app, **kwargs):
-        app.add_route(cls.as_view(**kwargs), '/', methods=['GET', 'POST'])
-        app.add_route(cls.as_view(**kwargs), '/<id:number>', methods=['GET', 'PATCH', 'DELETE'])
+    def register(cls, app, view_kwargs=None, prefix='', **kwargs):
+        view_kwargs = view_kwargs or {}
+        view_func = cls.as_view(**view_kwargs)
+        app.add_route(
+            view_func, prefix + '/',
+            methods=['GET', 'POST'], **kwargs)
+        app.add_route(
+            view_func, prefix + '/<id>',
+            methods=['GET', 'PATCH', 'DELETE'], **kwargs)
         for name in dir(cls):
             elem = getattr(cls, name)
             route = getattr(elem, '_route', None)
             if route:
-                cls.add_custom_route(app, name, route, **kwargs)
+                route['kwargs'].update(kwargs)
+                cls.add_custom_route(app, name, route, **view_kwargs)
 
     @classmethod
-    def add_custom_route(cls, app, name, route, **kwargs):
+    def add_custom_route(cls, app, name, route, prefix='', **view_kwargs):
+        view_kwargs = view_kwargs or {}
         endpoint = name.replace('_', '-')
-        handler = cls.as_view(method=name, **kwargs)
+        handler = cls.as_view(method=name, **view_kwargs)
         if route['type'] == 'detail':
-            path = '/<id:number>/{}'.format(endpoint)
+            path = prefix + '/<id>/{}'.format(endpoint)
             app.add_route(handler, path, **route['kwargs'])
         elif route['type'] == 'index':
-            path = '/{}'.format(endpoint)
+            path = prefix + '/{}'.format(endpoint)
             app.add_route(handler, path, **route['kwargs'])
         else:
             raise ConfigurationException('Unknown route type {}'.format(route['type']))
