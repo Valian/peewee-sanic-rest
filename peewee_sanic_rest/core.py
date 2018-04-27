@@ -125,7 +125,8 @@ class Resource(object):
 
     async def dispatch(self, request, **kwargs):
         try:
-            is_detail_view = bool(kwargs.get('id'))
+            resource_id = kwargs.get('id')
+            is_detail_view = bool(resource_id)
             handler = self._get_handler(request.method, is_detail_view)
             return await handler(request, **kwargs)
         except FilterInvalidArgumentException as e:
@@ -163,7 +164,7 @@ class Resource(object):
             route = getattr(elem, '_route', None)
             if route:
                 route['kwargs'].update(kwargs)
-                cls.add_custom_route(app, name, route, **view_kwargs)
+                cls.add_custom_route(app, name, route, prefix, **view_kwargs)
 
     @classmethod
     def add_custom_route(cls, app, name, route, prefix='', **view_kwargs):
@@ -202,9 +203,9 @@ class ModelResource(Resource):
     async def serialize(self, o):
         return self.schema.dump(o).data
 
-    async def dispatch(self, request, id=None):
+    async def dispatch(self, request, **kwargs):
         try:
-            return await super(ModelResource, self).dispatch(request, id)
+            return await super(ModelResource, self).dispatch(request, **kwargs)
         except self.model.DoesNotExist:
             return json({'error': 'Not Found'}, status=404)
 
